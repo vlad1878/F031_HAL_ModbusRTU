@@ -123,9 +123,39 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim14);
   lcd1602_Init();
   lcd1602_SetCursor(0, 0);
-  sprintf(tx_buffer_lcd, "Good job dude!   ");
-  lcd1602_Print_text(tx_buffer_lcd);
-  HAL_Delay(1000);
+  for(int i = 0; i < 20; i++){
+	  static uint8_t val = 0;
+	  switch(val){
+	  case 0:
+			sprintf(tx_buffer_lcd, "Initialization.   ");
+			lcd1602_Print_text(tx_buffer_lcd);
+			HAL_Delay(300);
+			val++;
+			break;
+	  case 1:
+			sprintf(tx_buffer_lcd, "Initialization..   ");
+			lcd1602_Print_text(tx_buffer_lcd);
+			HAL_Delay(300);
+			val++;
+			break;
+	  case 2:
+		  	sprintf(tx_buffer_lcd, "Initialization...   ");
+		    lcd1602_Print_text(tx_buffer_lcd);
+		    HAL_Delay(300);
+		    val++;
+		    break;
+	  case 3:
+		  	sprintf(tx_buffer_lcd, "Initialization.   ");
+		    lcd1602_Print_text(tx_buffer_lcd);
+		    HAL_Delay(300);
+		    val++;
+		    break;
+	  }
+	  if(val == 3){
+		  val = 0;
+	  }
+  }
+
 
   /* USER CODE END 2 */
 
