@@ -1,0 +1,8 @@
+../Core/Src/ModbusRTU_lib.c:8:10:ModbusRTU_CRC16_Calculate	24	static
+../Core/Src/ModbusRTU_lib.c:36:6:ModbusRTU_CRC16_Check	40	static
+../Core/Src/ModbusRTU_lib.c:51:6:ModbusRTU_Read_Coils_0x01	32	static
+../Core/Src/ModbusRTU_lib.c:63:6:ModbusRTU_Read_Discrete_Inputs_0x02	32	static
+../Core/Src/ModbusRTU_lib.c:75:6:ModbusRTU_Read_Holding_Registers_0x03	32	static
+../Core/Src/ModbusRTU_lib.c:87:6:ModbusRTU_Read_Input_Registers_0x04	32	static
+../Core/Src/ModbusRTU_lib.c:99:6:ModbusRTU_Write_Single_Coil_0x05	32	static
+../Core/Src/ModbusRTU_lib.c:117:6:ModbusRTU_Write_Single_Register_0x06	32	static
