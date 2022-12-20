@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <lcd1602_i2c_lib.h>
-#include <SMA_filter_lib.h>
 #include "ModbusRTU_lib.h"
 /* USER CODE END Includes */
 
@@ -36,6 +35,12 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define UART_DMA_RX_BUFFER_SIZE 64
+#define RE72_ADRESS 0x88
+#define RE72_BYTE_ORDER 0x01
+#define RE72_SP 0xFF4
+#define RE72_PV 0x1B58
+#define RE72_FUNCTION_READ_REGISTER 0x03
+#define RE72_FUNCTION_WRITE_REGISTER 0x06
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,12 +49,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc;
-DMA_HandleTypeDef hdma_adc;
-
 I2C_HandleTypeDef hi2c1;
-
-TIM_HandleTypeDef htim14;
 
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_rx;
@@ -63,8 +63,11 @@ extern bool adc_flag;
 extern uint8_t ModbusRTU_tx_buffer[ModbusRTU_TX_BUFFER_SIZE];
 extern uint8_t ModbusRTU_rx_buffer[ModbusRTU_RX_BUFFER_SIZE];
 volatile bool ModbusRTU_rx_flag = 0;
+unsigned long t_ModbusRTU_tx = 0;
 
 uint8_t uart_dma_rx_buffer[UART_DMA_RX_BUFFER_SIZE] = {0, };
+
+volatile bool display_flag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,11 +75,12 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_ADC_Init(void);
-static void MX_TIM14_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+void Read_Register_RE72(uint16_t Register, uint8_t Function_code);
+void Read_Two_Registers_RE72(uint16_t Register, uint8_t Function_code);
+void Write_Register_RE72(uint16_t Register, uint8_t Function_code, uint16_t Data_To_Write);
+void Display_Data_ModbusRTU(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -114,13 +118,11 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_I2C1_Init();
-  MX_ADC_Init();
-  MX_TIM14_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+  t_ModbusRTU_tx = HAL_GetTick();
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, uart_dma_rx_buffer, UART_DMA_RX_BUFFER_SIZE);
   __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
-  HAL_TIM_Base_Start_IT(&htim14);
   lcd1602_Init();
   lcd1602_SetCursor(0, 0);
   for(int i = 0; i < 20; i++){
@@ -163,9 +165,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  ModbusRTU_Read_Holding_Registers_0x03(0x88, 4015, 1, 0);
-	  HAL_UART_Transmit(&huart1, ModbusRTU_tx_buffer, 8, 1000);
-	  HAL_Delay(1000);
+	  Display_Data_ModbusRTU();
+	  if((HAL_GetTick() - t_ModbusRTU_tx) >= 5000){
+		  t_ModbusRTU_tx = HAL_GetTick();
+		  Read_Register_RE72(RE72_SP, RE72_FUNCTION_READ_REGISTER);
+		  //Read_TWO_Registers_RE72(RE72_PV, RE72_FUNCTION_READ_REGISTER);
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -186,11 +191,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSI14;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSI14State = RCC_HSI14_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.HSI14CalibrationValue = 16;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL12;
@@ -219,60 +222,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief ADC Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_ADC_Init(void)
-{
-
-  /* USER CODE BEGIN ADC_Init 0 */
-
-  /* USER CODE END ADC_Init 0 */
-
-  ADC_ChannelConfTypeDef sConfig = {0};
-
-  /* USER CODE BEGIN ADC_Init 1 */
-
-  /* USER CODE END ADC_Init 1 */
-
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
-  hadc.Instance = ADC1;
-  hadc.Init.ClockPrescaler = ADC_CLOCK_ASYNC_DIV1;
-  hadc.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc.Init.ScanConvMode = ADC_SCAN_DIRECTION_FORWARD;
-  hadc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-  hadc.Init.LowPowerAutoWait = DISABLE;
-  hadc.Init.LowPowerAutoPowerOff = DISABLE;
-  hadc.Init.ContinuousConvMode = ENABLE;
-  hadc.Init.DiscontinuousConvMode = DISABLE;
-  hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc.Init.DMAContinuousRequests = DISABLE;
-  hadc.Init.Overrun = ADC_OVR_DATA_PRESERVED;
-  if (HAL_ADC_Init(&hadc) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure for the selected ADC regular channel to be converted.
-  */
-  sConfig.Channel = ADC_CHANNEL_VREFINT;
-  sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
-  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
-  if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC_Init 2 */
-
-  /* USER CODE END ADC_Init 2 */
-
 }
 
 /**
@@ -324,37 +273,6 @@ static void MX_I2C1_Init(void)
 }
 
 /**
-  * @brief TIM14 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM14_Init(void)
-{
-
-  /* USER CODE BEGIN TIM14_Init 0 */
-
-  /* USER CODE END TIM14_Init 0 */
-
-  /* USER CODE BEGIN TIM14_Init 1 */
-
-  /* USER CODE END TIM14_Init 1 */
-  htim14.Instance = TIM14;
-  htim14.Init.Prescaler = 480;
-  htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim14.Init.Period = 1;
-  htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM14_Init 2 */
-
-  /* USER CODE END TIM14_Init 2 */
-
-}
-
-/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -399,9 +317,6 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* DMA1_Channel1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
   /* DMA1_Channel2_3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
@@ -440,6 +355,40 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
 	if(huart->Instance == USART1){
 		memcpy(ModbusRTU_rx_buffer, uart_dma_rx_buffer, Size);
 		HAL_UARTEx_ReceiveToIdle_DMA(&huart1, uart_dma_rx_buffer, UART_DMA_RX_BUFFER_SIZE);
+		display_flag = 1;
+	}
+}
+
+void Read_Register_RE72(uint16_t Register, uint8_t Function_code){
+	if(Function_code == 0x03){
+		ModbusRTU_Read_Holding_Registers_0x03(RE72_ADRESS, Register, 1, RE72_BYTE_ORDER);
+		HAL_UART_Transmit(&huart1, ModbusRTU_tx_buffer, 8, 1000);
+	}
+}
+
+void Read_TWO_Registers_RE72(uint16_t Register, uint8_t Function_code){
+	if(Function_code == 0x03){
+		ModbusRTU_Read_Holding_Registers_0x03(RE72_ADRESS, Register, 2, RE72_BYTE_ORDER);
+		HAL_UART_Transmit(&huart1, ModbusRTU_tx_buffer, 8, 1000);
+	}
+}
+
+void Write_Register_RE72(uint16_t Register, uint8_t Function_code, uint16_t Data_To_Write){
+	if(Function_code == 0x06){
+		ModbusRTU_Write_Single_Register_0x06(RE72_ADRESS, Register, Data_To_Write, RE72_BYTE_ORDER);
+		HAL_UART_Transmit(&huart1, ModbusRTU_tx_buffer, 8, 1000);
+	}
+}
+
+
+void Display_Data_ModbusRTU(void){
+	if(display_flag){
+		lcd1602_SetCursor(0, 0);
+		sprintf(tx_buffer_lcd, "ModbusRTU rx:  ");
+		lcd1602_Print_text(tx_buffer_lcd);
+		lcd1602_SetCursor(0, 1);
+		sprintf(tx_buffer_lcd, "0x%04x%04x   ", ModbusRTU_rx_buffer[3], ModbusRTU_rx_buffer[4]);
+		display_flag = 0;
 	}
 }
 /* USER CODE END 4 */

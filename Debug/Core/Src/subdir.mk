@@ -6,10 +6,8 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../Core/Src/ModbusRTU_lib.c \
-../Core/Src/SMA_filter_lib.c \
 ../Core/Src/lcd1602_i2c_lib.c \
 ../Core/Src/main.c \
-../Core/Src/modbus_crc_lib.c \
 ../Core/Src/stm32f0xx_hal_msp.c \
 ../Core/Src/stm32f0xx_it.c \
 ../Core/Src/syscalls.c \
@@ -18,10 +16,8 @@ C_SRCS += \
 
 OBJS += \
 ./Core/Src/ModbusRTU_lib.o \
-./Core/Src/SMA_filter_lib.o \
 ./Core/Src/lcd1602_i2c_lib.o \
 ./Core/Src/main.o \
-./Core/Src/modbus_crc_lib.o \
 ./Core/Src/stm32f0xx_hal_msp.o \
 ./Core/Src/stm32f0xx_it.o \
 ./Core/Src/syscalls.o \
@@ -30,10 +26,8 @@ OBJS += \
 
 C_DEPS += \
 ./Core/Src/ModbusRTU_lib.d \
-./Core/Src/SMA_filter_lib.d \
 ./Core/Src/lcd1602_i2c_lib.d \
 ./Core/Src/main.d \
-./Core/Src/modbus_crc_lib.d \
 ./Core/Src/stm32f0xx_hal_msp.d \
 ./Core/Src/stm32f0xx_it.d \
 ./Core/Src/syscalls.d \
@@ -48,7 +42,7 @@ Core/Src/%.o Core/Src/%.su: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/ModbusRTU_lib.d ./Core/Src/ModbusRTU_lib.o ./Core/Src/ModbusRTU_lib.su ./Core/Src/SMA_filter_lib.d ./Core/Src/SMA_filter_lib.o ./Core/Src/SMA_filter_lib.su ./Core/Src/lcd1602_i2c_lib.d ./Core/Src/lcd1602_i2c_lib.o ./Core/Src/lcd1602_i2c_lib.su ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/modbus_crc_lib.d ./Core/Src/modbus_crc_lib.o ./Core/Src/modbus_crc_lib.su ./Core/Src/stm32f0xx_hal_msp.d ./Core/Src/stm32f0xx_hal_msp.o ./Core/Src/stm32f0xx_hal_msp.su ./Core/Src/stm32f0xx_it.d ./Core/Src/stm32f0xx_it.o ./Core/Src/stm32f0xx_it.su ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32f0xx.d ./Core/Src/system_stm32f0xx.o ./Core/Src/system_stm32f0xx.su
+	-$(RM) ./Core/Src/ModbusRTU_lib.d ./Core/Src/ModbusRTU_lib.o ./Core/Src/ModbusRTU_lib.su ./Core/Src/lcd1602_i2c_lib.d ./Core/Src/lcd1602_i2c_lib.o ./Core/Src/lcd1602_i2c_lib.su ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stm32f0xx_hal_msp.d ./Core/Src/stm32f0xx_hal_msp.o ./Core/Src/stm32f0xx_hal_msp.su ./Core/Src/stm32f0xx_it.d ./Core/Src/stm32f0xx_it.o ./Core/Src/stm32f0xx_it.su ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32f0xx.d ./Core/Src/system_stm32f0xx.o ./Core/Src/system_stm32f0xx.su
 
 .PHONY: clean-Core-2f-Src
 

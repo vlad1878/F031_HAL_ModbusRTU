@@ -22,7 +22,6 @@
 #include "stm32f0xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "SMA_filter_lib.h"
 #include <stdbool.h>
 /* USER CODE END Includes */
 
@@ -43,14 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-uint16_t SMA_Filter_Buffer_1[SMA_FILTER_ORDER] = { 0, };
-uint16_t SMA_Filter_Buffer_2[SMA_FILTER_ORDER] = { 0, };
-uint16_t SMA_Filter_Buffer_3[SMA_FILTER_ORDER] = { 0, };
 
-uint16_t ADC_RAW_Data[3] = { 0, };
-uint16_t ADC_SMA_Data[3] = { 0, };
-uint16_t Counter_DMA_IT = 0;
-bool adc_flag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,9 +56,6 @@ bool adc_flag = 0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern DMA_HandleTypeDef hdma_adc;
-extern ADC_HandleTypeDef hadc;
-extern TIM_HandleTypeDef htim14;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
@@ -154,27 +143,6 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles DMA1 channel 1 interrupt.
-  */
-void DMA1_Channel1_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Channel1_IRQn 0 */
-
-  /* USER CODE END DMA1_Channel1_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_adc);
-  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
-  Counter_DMA_IT++;
-    if (Counter_DMA_IT == 1200) {
-    		Counter_DMA_IT = 0;
-    		ADC_SMA_Data[0] = SMA_FILTER_Get_Value(SMA_Filter_Buffer_1, &ADC_RAW_Data[0]);
-    		ADC_SMA_Data[1] = SMA_FILTER_Get_Value(SMA_Filter_Buffer_2, &ADC_RAW_Data[1]);
-    		ADC_SMA_Data[2] = SMA_FILTER_Get_Value(SMA_Filter_Buffer_3, &ADC_RAW_Data[2]);
-    		adc_flag = 1;
-    }
-  /* USER CODE END DMA1_Channel1_IRQn 1 */
-}
-
-/**
   * @brief This function handles DMA1 channel 2 and 3 interrupts.
   */
 void DMA1_Channel2_3_IRQHandler(void)
@@ -186,34 +154,6 @@ void DMA1_Channel2_3_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Channel2_3_IRQn 1 */
 
   /* USER CODE END DMA1_Channel2_3_IRQn 1 */
-}
-
-/**
-  * @brief This function handles ADC interrupt.
-  */
-void ADC1_IRQHandler(void)
-{
-  /* USER CODE BEGIN ADC1_IRQn 0 */
-
-  /* USER CODE END ADC1_IRQn 0 */
-  HAL_ADC_IRQHandler(&hadc);
-  /* USER CODE BEGIN ADC1_IRQn 1 */
-
-  /* USER CODE END ADC1_IRQn 1 */
-}
-
-/**
-  * @brief This function handles TIM14 global interrupt.
-  */
-void TIM14_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM14_IRQn 0 */
-
-  /* USER CODE END TIM14_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim14);
-  /* USER CODE BEGIN TIM14_IRQn 1 */
-  HAL_ADC_Start_DMA(&hadc, ADC_RAW_Data, 3);
-  /* USER CODE END TIM14_IRQn 1 */
 }
 
 /**
