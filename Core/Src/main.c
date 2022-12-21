@@ -35,10 +35,11 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define UART_DMA_RX_BUFFER_SIZE 64
-#define RE72_ADRESS 0x88
+#define RE72_ADRESS 0x58  //01011000
 #define RE72_BYTE_ORDER 0x01
-#define RE72_SP 0xFF4
-#define RE72_PV 0x1B58
+#define RE72_SP_change 0xFF4
+#define RE72_SP 0x1D4E    //register 7502
+#define RE72_PV 0x1D4C    //register 7500
 #define RE72_FUNCTION_READ_REGISTER 0x03
 #define RE72_FUNCTION_WRITE_REGISTER 0x06
 /* USER CODE END PD */
@@ -56,18 +57,24 @@ DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 extern char tx_buffer_lcd[40];
-extern uint16_t ADC_SMA_Data[3];
-extern uint16_t ADC_RAW_Data[3];
-extern bool adc_flag;
 
 extern uint8_t ModbusRTU_tx_buffer[ModbusRTU_TX_BUFFER_SIZE];
 extern uint8_t ModbusRTU_rx_buffer[ModbusRTU_RX_BUFFER_SIZE];
 volatile bool ModbusRTU_rx_flag = 0;
 unsigned long t_ModbusRTU_tx = 0;
+unsigned long t_ModbusRTU_tx_2 = 0;
 
 uint8_t uart_dma_rx_buffer[UART_DMA_RX_BUFFER_SIZE] = {0, };
 
 volatile bool display_flag = 0;
+
+union {
+	int32_t val_int;
+	float result_float;
+}conversation_int_to_float;
+int32_t RE72_SP_int = 0;
+int32_t RE72_PV_int = 0;
+int16_t i = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -81,6 +88,9 @@ void Read_Register_RE72(uint16_t Register, uint8_t Function_code);
 void Read_Two_Registers_RE72(uint16_t Register, uint8_t Function_code);
 void Write_Register_RE72(uint16_t Register, uint8_t Function_code, uint16_t Data_To_Write);
 void Display_Data_ModbusRTU(void);
+void Read_SP_value_RE72(void);
+void Read_PV_value_RE72(void);
+void Write_SP_value_RE72(uint16_t value);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -121,32 +131,38 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   t_ModbusRTU_tx = HAL_GetTick();
+  t_ModbusRTU_tx_2 = HAL_GetTick();
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, uart_dma_rx_buffer, UART_DMA_RX_BUFFER_SIZE);
   __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+  Write_SP_value_RE72(i);
   lcd1602_Init();
   lcd1602_SetCursor(0, 0);
   for(int i = 0; i < 20; i++){
 	  static uint8_t val = 0;
 	  switch(val){
 	  case 0:
+		  	lcd1602_SetCursor(0, 0);
 			sprintf(tx_buffer_lcd, "Initialization.   ");
 			lcd1602_Print_text(tx_buffer_lcd);
 			HAL_Delay(300);
 			val++;
 			break;
 	  case 1:
+		    lcd1602_SetCursor(0, 0);
 			sprintf(tx_buffer_lcd, "Initialization..   ");
 			lcd1602_Print_text(tx_buffer_lcd);
 			HAL_Delay(300);
 			val++;
 			break;
 	  case 2:
+		    lcd1602_SetCursor(0, 0);
 		  	sprintf(tx_buffer_lcd, "Initialization...   ");
 		    lcd1602_Print_text(tx_buffer_lcd);
 		    HAL_Delay(300);
 		    val++;
 		    break;
 	  case 3:
+		    lcd1602_SetCursor(0, 0);
 		  	sprintf(tx_buffer_lcd, "Initialization.   ");
 		    lcd1602_Print_text(tx_buffer_lcd);
 		    HAL_Delay(300);
@@ -166,10 +182,19 @@ int main(void)
   while (1)
   {
 	  Display_Data_ModbusRTU();
-	  if((HAL_GetTick() - t_ModbusRTU_tx) >= 5000){
+	  if((HAL_GetTick() - t_ModbusRTU_tx) >= 1000){
 		  t_ModbusRTU_tx = HAL_GetTick();
-		  Read_Register_RE72(RE72_SP, RE72_FUNCTION_READ_REGISTER);
-		  //Read_TWO_Registers_RE72(RE72_PV, RE72_FUNCTION_READ_REGISTER);
+		  Read_SP_value_RE72();
+		  Read_PV_value_RE72();
+
+	  }
+	  if((HAL_GetTick() - t_ModbusRTU_tx_2) >= 300){
+		  Write_SP_value_RE72(i);
+		  i++;
+		  if(i >= 500){
+			  i = 0;
+		  }
+
 	  }
     /* USER CODE END WHILE */
 
@@ -366,7 +391,7 @@ void Read_Register_RE72(uint16_t Register, uint8_t Function_code){
 	}
 }
 
-void Read_TWO_Registers_RE72(uint16_t Register, uint8_t Function_code){
+void Read_Two_Registers_RE72(uint16_t Register, uint8_t Function_code){
 	if(Function_code == 0x03){
 		ModbusRTU_Read_Holding_Registers_0x03(RE72_ADRESS, Register, 2, RE72_BYTE_ORDER);
 		HAL_UART_Transmit(&huart1, ModbusRTU_tx_buffer, 8, 1000);
@@ -380,14 +405,41 @@ void Write_Register_RE72(uint16_t Register, uint8_t Function_code, uint16_t Data
 	}
 }
 
+void Read_PV_value_RE72(){
+	 Read_Two_Registers_RE72(RE72_PV, RE72_FUNCTION_READ_REGISTER);
+	 conversation_int_to_float.val_int = ((uint32_t)ModbusRTU_rx_buffer[3] << 24) | ((uint32_t)ModbusRTU_rx_buffer[4] << 16) | ((uint32_t)ModbusRTU_rx_buffer[5] << 8) | ((uint32_t)ModbusRTU_rx_buffer[6]);
+	 RE72_PV_int = conversation_int_to_float.result_float;
+	 lcd1602_SetCursor(0, 1);
+	 sprintf(tx_buffer_lcd, "PV value is %u           ", RE72_PV_int);
+	 lcd1602_Print_text(tx_buffer_lcd);
+	 HAL_Delay(300);
+}
+
+void Read_SP_value_RE72(){
+	Read_Two_Registers_RE72(RE72_SP, RE72_FUNCTION_READ_REGISTER);
+	conversation_int_to_float.val_int = ((uint32_t)ModbusRTU_rx_buffer[3] << 24) | ((uint32_t)ModbusRTU_rx_buffer[4] << 16) | ((uint32_t)ModbusRTU_rx_buffer[5] << 8) | ((uint32_t)ModbusRTU_rx_buffer[6]);
+	RE72_SP_int = conversation_int_to_float.result_float;
+	lcd1602_SetCursor(0, 0);
+	sprintf(tx_buffer_lcd, "SP value is %u           ", RE72_SP_int);
+	lcd1602_Print_text(tx_buffer_lcd);
+	HAL_Delay(300);
+}
+void Write_SP_value_RE72(uint16_t value){
+	Write_Register_RE72(RE72_SP_change, RE72_FUNCTION_WRITE_REGISTER, (value * 10));
+	HAL_Delay(300);
+	memset(uart_dma_rx_buffer, 0, UART_DMA_RX_BUFFER_SIZE);
+	memset(ModbusRTU_rx_buffer, 0, ModbusRTU_RX_BUFFER_SIZE);
+	HAL_Delay(300);
+}
 
 void Display_Data_ModbusRTU(void){
 	if(display_flag){
-		lcd1602_SetCursor(0, 0);
-		sprintf(tx_buffer_lcd, "ModbusRTU rx:  ");
-		lcd1602_Print_text(tx_buffer_lcd);
-		lcd1602_SetCursor(0, 1);
-		sprintf(tx_buffer_lcd, "0x%04x%04x   ", ModbusRTU_rx_buffer[3], ModbusRTU_rx_buffer[4]);
+		//lcd1602_SetCursor(0, 0);
+		//sprintf(tx_buffer_lcd, "ModbusRTU rx:    ");
+		//lcd1602_Print_text(tx_buffer_lcd);
+		//lcd1602_SetCursor(0, 1);
+		//sprintf(tx_buffer_lcd, "0x%04x%04x   ", ModbusRTU_rx_buffer[3], ModbusRTU_rx_buffer[4]);
+		//lcd1602_Print_text(tx_buffer_lcd);
 		display_flag = 0;
 	}
 }

@@ -1,6 +1,8 @@
 "./Core/Src/ModbusRTU_lib.o"
+"./Core/Src/SMA_filter_lib.o"
 "./Core/Src/lcd1602_i2c_lib.o"
 "./Core/Src/main.o"
+"./Core/Src/modbus_crc_lib.o"
 "./Core/Src/stm32f0xx_hal_msp.o"
 "./Core/Src/stm32f0xx_it.o"
 "./Core/Src/syscalls.o"

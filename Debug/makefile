@@ -60,8 +60,8 @@ all: main-build
 main-build: F031_HAl.elf secondary-outputs
 
 # Tool invocations
-F031_HAl.elf F031_HAl.map: $(OBJS) $(USER_OBJS) C:\STM32_Projects\F031_HAl\STM32F031K6TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "F031_HAl.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\STM32_Projects\F031_HAl\STM32F031K6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="F031_HAl.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+F031_HAl.elf F031_HAl.map: $(OBJS) $(USER_OBJS) C:\STM32_Projects\GitHub\F031_HAL_ModbusRTU\STM32F031K6TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "F031_HAl.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\STM32_Projects\GitHub\F031_HAL_ModbusRTU\STM32F031K6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="F031_HAl.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
